@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 // Gemini API key — same as ShelfScanner
@@ -241,7 +241,8 @@ Return ONLY the JSON array, no other text.`;
 
     return (
       <View style={s.container}>
-        <CameraView ref={cameraRef} style={s.camera} facing="back">
+        <CameraView ref={cameraRef} style={s.camera} facing="back" />
+        <View style={s.cameraOverlay}>
           <SafeAreaView style={s.cameraTop}>
             <Text style={s.cameraTitle}>Scan Lab</Text>
             <View style={s.modeToggle}>
@@ -270,7 +271,7 @@ Return ONLY the JSON array, no other text.`;
               <View style={{ width: 80 }} />
             </View>
           </SafeAreaView>
-        </CameraView>
+        </View>
       </View>
     );
   }
@@ -347,7 +348,8 @@ const s = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', color: '#EDE7DC', textAlign: 'center' },
   subtitle: { fontSize: 14, color: '#9B9488', textAlign: 'center' },
 
-  camera: { flex: 1, justifyContent: 'space-between' },
+  camera: { ...StyleSheet.absoluteFillObject },
+  cameraOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between' },
   cameraTop: { alignItems: 'center', paddingTop: 8 },
   cameraTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
   modeToggle: { flexDirection: 'row', gap: 8, marginTop: 8 },
