@@ -45,10 +45,12 @@ export default function App() {
       exif: true,
     });
     if (photo) {
-      const result = await manipulateAsync(photo.uri, [{ rotate: 0 }], {
-        compress: 0.8,
-        format: SaveFormat.JPEG,
-      });
+      // Resize to max 2048px and compress to reduce base64 size for Gemini
+      const result = await manipulateAsync(
+        photo.uri,
+        [{ resize: { width: 2048 } }],
+        { compress: 0.6, format: SaveFormat.JPEG }
+      );
       processPhoto(result.uri);
     }
   };
@@ -123,7 +125,11 @@ Return ONLY the JSON, no other text.`;
     const elapsed = Date.now() - t0;
     setTiming(elapsed);
 
-    if (!resp.ok) throw new Error(`Gemini API error: ${resp.status}`);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.log('Gemini error:', errText.slice(0, 500));
+      throw new Error(`Gemini API error: ${resp.status} — ${errText.slice(0, 200)}`);
+    }
 
     const data = await resp.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -194,7 +200,9 @@ Return ONLY the JSON array, no other text.`;
     setTiming(elapsed);
 
     if (!resp.ok) {
-      throw new Error(`Gemini API error: ${resp.status}`);
+      const errText = await resp.text();
+      console.log('Gemini error:', errText.slice(0, 500));
+      throw new Error(`Gemini API error: ${resp.status} — ${errText.slice(0, 200)}`);
     }
 
     const data = await resp.json();
