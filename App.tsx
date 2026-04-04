@@ -14,7 +14,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 // Gemini API key — same as ShelfScanner
-const GEMINI_API_KEY = 'AIzaSyDFhJWminpjkaJLMa3hzE47tb0KyLF7kA0';
+const GEMINI_API_KEY = 'AIzaSyAjHBUvY_a2rxJ2Hi8fmOyLj7x0sdD-JxA';
 
 type Phase = 'camera' | 'processing' | 'results';
 
