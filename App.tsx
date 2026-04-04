@@ -42,13 +42,15 @@ export default function App() {
     if (!cameraRef.current) return;
     const photo = await cameraRef.current.takePictureAsync({
       quality: 0.8,
-      exif: true,
+      exif: false,
+      skipProcessing: false,
     });
     if (photo) {
-      // Resize to max 2048px and compress to reduce base64 size for Gemini
+      // rotate(90) fixes orientation — DO NOT CHANGE (tested 2026-04-04)
+      // Then resize for Gemini
       const result = await manipulateAsync(
         photo.uri,
-        [{ resize: { width: 2048 } }],
+        [{ rotate: 90 }, { resize: { width: 2048 } }],
         { compress: 0.6, format: SaveFormat.JPEG }
       );
       processPhoto(result.uri);
@@ -106,7 +108,7 @@ Return JSON: {"count": <number>, "spines": ["brief description of each spine lef
 Return ONLY the JSON, no other text.`;
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,7 +182,7 @@ Return JSON array: [{"title": "...", "author": "...", "confidence": "...", "subt
 Return ONLY the JSON array, no other text.`;
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
