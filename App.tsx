@@ -36,6 +36,7 @@ export default function App() {
   const [rawResponse, setRawResponse] = useState<string>('');
   const [timing, setTiming] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'count' | 'identify'>('count');
 
   const takePicture = async () => {
     if (!cameraRef.current) return;
@@ -75,11 +76,81 @@ export default function App() {
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      await runGemini(base64, t0);
+      if (mode === 'count') {
+        await runGeminiCount(base64, t0);
+      } else {
+        await runGemini(base64, t0);
+      }
     } catch (e: any) {
       setError(e.message || 'Unknown error');
       setPhase('results');
     }
+  };
+
+  const runGeminiCount = async (base64: string, t0: number) => {
+    const prompt = `Count the number of books visible in this photo by their spines.
+
+COUNTING METHOD:
+1. Start at the LEFT edge
+2. Move slowly to the RIGHT
+3. For EACH spine boundary you see, count it as a book
+4. A single-word title IS a book
+5. A thin spine IS a book
+6. Publisher text at the bottom of a spine is NOT a separate book
+7. Author name + title on the same spine = ONE book
+8. After reaching the right edge, DOUBLE CHECK by counting again from right to left
+
+Return JSON: {"count": <number>, "spines": ["brief description of each spine left to right"]}
+Return ONLY the JSON, no other text.`;
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+            ],
+          }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+        }),
+      }
+    );
+
+    const elapsed = Date.now() - t0;
+    setTiming(elapsed);
+
+    if (!resp.ok) throw new Error(`Gemini API error: ${resp.status}`);
+
+    const data = await resp.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    setRawResponse(text);
+
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const count = parsed.count || 0;
+        const spines = parsed.spines || [];
+        setBooks(spines.map((desc: string, i: number) => ({
+          title: desc,
+          author: null,
+          confidence: 'count',
+          subtitle: null,
+          series: null,
+          position: i + 1,
+        })));
+      } else {
+        setError('Could not parse count from Gemini response');
+      }
+    } catch (e) {
+      setError('JSON parse error: ' + text.slice(0, 200));
+    }
+
+    setPhase('results');
   };
 
   const runGemini = async (base64: string, t0: number) => {
@@ -173,7 +244,20 @@ Return ONLY the JSON array, no other text.`;
         <CameraView ref={cameraRef} style={s.camera} facing="back">
           <SafeAreaView style={s.cameraTop}>
             <Text style={s.cameraTitle}>Scan Lab</Text>
-            <Text style={s.cameraSubtitle}>Pure Gemini · No filters · Raw results</Text>
+            <View style={s.modeToggle}>
+              <TouchableOpacity
+                style={[s.modeBtn, mode === 'count' && s.modeActive]}
+                onPress={() => setMode('count')}
+              >
+                <Text style={[s.modeText, mode === 'count' && s.modeActiveText]}>Count Only</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modeBtn, mode === 'identify' && s.modeActive]}
+                onPress={() => setMode('identify')}
+              >
+                <Text style={[s.modeText, mode === 'identify' && s.modeActiveText]}>Full ID</Text>
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
           <SafeAreaView>
             <View style={s.cameraBottom}>
@@ -266,6 +350,11 @@ const s = StyleSheet.create({
   camera: { flex: 1, justifyContent: 'space-between' },
   cameraTop: { alignItems: 'center', paddingTop: 8 },
   cameraTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  modeToggle: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  modeBtn: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#666' },
+  modeActive: { backgroundColor: '#C9923C', borderColor: '#C9923C' },
+  modeText: { color: '#999', fontSize: 13, fontWeight: '600' },
+  modeActiveText: { color: '#fff' },
   cameraSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
   cameraBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 32, paddingBottom: 16 },
   shutter: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
