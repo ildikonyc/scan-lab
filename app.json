@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.shelfscanner.scanlab",
       "infoPlist": {
-        "NSCameraUsageDescription": "Scan Lab needs camera access to photograph bookshelves"
+        "NSCameraUsageDescription": "Scan Lab needs camera access to photograph bookshelves",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
